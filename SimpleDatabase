@@ -1,0 +1,107 @@
+
+import java.io.*;
+import java.util.*;
+
+public class SimpleDatabase {
+
+    private static final String METADATA_FILE = "metadata.txt";
+    private static final String TABLE_FILE = "table.txt";
+
+    public static void main(String[] args) throws IOException {
+        Scanner scanner = new Scanner(System.in);
+
+        // Parse and execute SQL statements until the user enters 'exit'
+        String statement;
+        do {
+            System.out.print("Enter SQL statement (or 'exit' to quit): ");
+            statement = scanner.nextLine();
+            if (!statement.equalsIgnoreCase("exit")) {
+                executeStatement(statement);
+            }
+        } while (!statement.equalsIgnoreCase("exit"));
+
+        scanner.close();
+    }
+
+    private static void executeStatement(String statement) throws IOException {
+        String[] tokens = statement.split("\\s+");
+
+        if (tokens[0].equalsIgnoreCase("create") && tokens[1].equalsIgnoreCase("table")) {
+            createTable(tokens);
+        } else if (tokens[0].equalsIgnoreCase("insert") && tokens[1].equalsIgnoreCase("into")) {
+            insertRow(tokens);
+        } else if (tokens[0].equalsIgnoreCase("select")) {
+            selectStatement(tokens);
+        } else {
+            System.out.println("Invalid SQL statement.");
+        }
+    }
+
+    private static void createTable(String[] tokens) throws IOException {
+        String tableName = tokens[2];
+        List<String> columns = new ArrayList<>();
+        List<String> columnTypes = new ArrayList<>();
+
+        for (int i = 3; i < tokens.length; i++) {
+            if (tokens[i].equalsIgnoreCase("integer") || tokens[i].equalsIgnoreCase("string")) {
+                columns.add(tokens[i - 1]);
+                columnTypes.add(tokens[i].toLowerCase());
+            }
+        }
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(METADATA_FILE, true))) {
+            writer.println(tableName);
+            for (int i = 0; i < columns.size(); i++) {
+                writer.println(columns.get(i) + "," + columnTypes.get(i));
+            }
+            writer.println();
+            System.out.println("Table created successfully.");
+        }
+    }
+
+    private static void insertRow(String[] tokens) throws IOException {
+        String tableName = tokens[2];
+        List<String> values = new ArrayList<>();
+
+        for (int i = 4; i < tokens.length; i++) {
+            if (tokens[i].equalsIgnoreCase("values")) {
+                while (i < tokens.length - 1) {
+                    values.add(tokens[++i].replaceAll("[(),]", ""));
+                }
+            }
+        }
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(tableName + ".txt", true))) {
+            writer.println(String.join(",", values));
+            System.out.println("Row inserted successfully.");
+        } catch (IOException e) {
+            System.out.println("Error inserting row: " + e.getMessage());
+        }
+    }
+
+    private static void selectStatement(String[] tokens) throws IOException {
+        String tableName = tokens[2];
+        List<String> columns = new ArrayList<>();
+
+        for (int i = 3; i < tokens.length; i++) {
+            if (tokens[i].equalsIgnoreCase("integer") || tokens[i].equalsIgnoreCase("string")) {
+                columns.add(tokens[i - 1]);
+            }
+        }
+
+        try (Scanner scanner = new Scanner(new File(tableName + ".txt"))) {
+            while (scanner.hasNextLine()) {
+                String row = scanner.nextLine();
+                String[] cells = row.split(",");
+                for (int i = 0; i < columns.size(); i++) {
+                    System.out.print(columns.get(i) + ": " + cells[i] + " ");
+                }
+                System.out.println();
+            }
+        } catch (IOException e) {
+            System.out.println("Error selecting statement: " + e.getMessage());
+        }
+    }
+}
+
+
